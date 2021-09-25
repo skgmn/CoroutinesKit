@@ -161,11 +161,4 @@ private class RefCountSharedFlow<T>(
     private object Completed
 
     private class CompletedWithException(val e: Throwable)
-
-    private class CollectorDisposedException : CancellationException() {
-        override fun fillInStackTrace(): Throwable {
-            stackTrace = emptyArray()
-            return this
-        }
-    }
 }
