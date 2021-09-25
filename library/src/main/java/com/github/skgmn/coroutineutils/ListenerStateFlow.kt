@@ -4,7 +4,6 @@ import kotlinx.coroutines.InternalCoroutinesApi
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.coroutines.CoroutineContext
 
@@ -28,12 +27,14 @@ class ListenerStateFlow<T> internal constructor(
     override suspend fun collect(collector: FlowCollector<T>) {
         val state = increaseRefCount()
         if (state.refCount == 1) {
-            context?.let { withContext(it) { block() } } ?: block()
+            withContextOrRun(context) { block() }
         }
         try {
             stateFlow.collect(collector)
         } finally {
-            decreaseRefCount()?.onClose?.invoke()
+            decreaseRefCount()?.onClose?.let {
+                withContextOrRun(context) { it() }
+            }
         }
     }
 
