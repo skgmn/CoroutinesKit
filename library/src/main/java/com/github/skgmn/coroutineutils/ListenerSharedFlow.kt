@@ -1,7 +1,6 @@
 package com.github.skgmn.coroutineutils
 
 import kotlinx.coroutines.InternalCoroutinesApi
-import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -22,7 +21,7 @@ class ListenerSharedFlow<T> internal constructor(
     private val context: CoroutineContext?,
     private val block: ListenerFlowCollector<T>.() -> Unit
 ) : SharedFlow<T>, ListenerFlowCollector<T> {
-    private val sharedFlow = MutableSharedFlow<T>(replay, Int.MAX_VALUE, BufferOverflow.DROP_OLDEST)
+    private val sharedFlow = MutableSharedFlow<T>(replay, Int.MAX_VALUE)
     private val listenerState = AtomicReference<ListenerState?>()
 
     @OptIn(InternalCoroutinesApi::class)
@@ -42,7 +41,7 @@ class ListenerSharedFlow<T> internal constructor(
         get() = sharedFlow.replayCache
 
     override fun emit(value: T) {
-        sharedFlow.tryEmit(value)
+        check(sharedFlow.tryEmit(value)) { "Some consumers might be infinitely suspended.." }
     }
 
     override fun invokeOnClose(block: () -> Unit) {

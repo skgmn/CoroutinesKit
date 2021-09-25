@@ -118,7 +118,11 @@ private class RefCountSharedFlow<T>(
         var refCount = 1
 
         val replayCache: List<T>
-            get() = synchronized(replayBuffer) { replayBuffer.toList() }
+            get() = if (replay > 0) {
+                synchronized(replayBuffer) { replayBuffer.toList() }
+            } else {
+                emptyList()
+            }
 
         fun dispose() {
             job.cancel(CollectorDisposedException())
