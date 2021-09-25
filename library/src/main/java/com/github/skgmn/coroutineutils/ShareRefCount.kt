@@ -134,11 +134,11 @@ private class RefCountSharedFlow<T>(
                 sharedFlow
                     .onSubscription {
                         replayMutexOwner?.let { lockOwner ->
-                            val replays = synchronized(replayBuffer) { replayBuffer.toList() }
-                            runCatching { replayMutex.unlock(lockOwner) }
-                            replayMutexOwner = null
-                            replays.forEach { emit(it) }
-                        }
+                            synchronized(replayBuffer) { replayBuffer.toList() }.also {
+                                runCatching { replayMutex.unlock(lockOwner) }
+                                replayMutexOwner = null
+                            }
+                        }?.forEach { emit(it) }
                         terminal?.let { emit(it) }
                         job.start()
                     }
