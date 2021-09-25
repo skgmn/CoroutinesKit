@@ -5,6 +5,8 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.flow.internal.FusibleFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlin.coroutines.CoroutineContext
 
 fun <T> Flow<T>.shareRefCount(
@@ -71,16 +73,36 @@ private class RefCountSharedFlow<T>(
 
     private class CollectorState<T>(
         source: Flow<T>,
-        replay: Int,
+        private val replay: Int,
         extraBufferCapacity: Int,
         onBufferOverflow: BufferOverflow
     ) {
-        private var terminal: Any? = null
         private val sharedFlow =
-            MutableSharedFlow<Any?>(replay, extraBufferCapacity, onBufferOverflow)
+            MutableSharedFlow<Any?>(0, extraBufferCapacity, onBufferOverflow)
+
+        private val replayMutex by lazy { Mutex() }
+        private val replayBuffer by lazy { ArrayDeque<T>(replay) }
+
+        @Volatile
+        private var terminal: Any? = null
+
         private val job = GlobalScope.launch(start = CoroutineStart.LAZY) {
             try {
-                source.collect(sharedFlow)
+                source.collect {
+                    if (replay > 0) {
+                        replayMutex.withLock {
+                            synchronized(replayBuffer) {
+                                while (replayBuffer.size >= replay) {
+                                    replayBuffer.removeFirst()
+                                }
+                                replayBuffer.addLast(it)
+                            }
+                            sharedFlow.emit(it)
+                        }
+                    } else {
+                        sharedFlow.emit(it)
+                    }
+                }
                 terminal = Completed
                 sharedFlow.emit(Completed)
             } catch (e: CollectorDisposedException) {
@@ -92,31 +114,47 @@ private class RefCountSharedFlow<T>(
             }
         }
 
+        @Volatile
         var refCount = 1
 
         val replayCache: List<T>
-            get() = sharedFlow.replayCache.filter {
-                it !is Completed && it !is CompletedWithException
-            } as List<T>
+            get() = synchronized(replayBuffer) { replayBuffer.toList() }
 
         fun dispose() {
             job.cancel(CollectorDisposedException())
         }
 
         suspend fun collect(collector: FlowCollector<T>) {
-            sharedFlow
-                .onSubscription {
-                    job.start()
-                    terminal?.let { emit(it) }
-                }
-                .takeWhile { it !is Completed }
-                .collect {
-                    if (it is CompletedWithException) {
-                        throw it.e
-                    } else {
-                        collector.emit(it as T)
+            var replayMutexOwner: Any? = null
+            if (replay > 0) {
+                replayMutexOwner = Any()
+                replayMutex.lock(replayMutexOwner)
+            }
+            try {
+                sharedFlow
+                    .onSubscription {
+                        replayMutexOwner?.let { lockOwner ->
+                            val replays = synchronized(replayBuffer) { replayBuffer.toList() }
+                            runCatching { replayMutex.unlock(lockOwner) }
+                            replayMutexOwner = null
+                            replays.forEach { emit(it) }
+                        }
+                        terminal?.let { emit(it) }
+                        job.start()
                     }
+                    .takeWhile { it !is Completed }
+                    .collect {
+                        if (it is CompletedWithException) {
+                            throw it.e
+                        } else {
+                            collector.emit(it as T)
+                        }
+                    }
+            } finally {
+                replayMutexOwner?.let {
+                    runCatching { replayMutex.unlock(it) }
                 }
+            }
         }
     }
 
