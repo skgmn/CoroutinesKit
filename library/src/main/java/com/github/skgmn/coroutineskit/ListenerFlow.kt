@@ -16,11 +16,14 @@ fun <T> listenerFlow(
     context: CoroutineContext? = null,
     block: ListenerFlowCollector<T>.() -> Unit
 ): Flow<T> {
+    require(onBufferOverflow != BufferOverflow.SUSPEND) {
+        "SUSPEND mode is not supported because listeners are not suspend functions."
+    }
     return channelFlow {
         var onClose: (() -> Unit)? = null
         val collector = object : ListenerFlowCollector<T> {
             override fun emit(value: T) {
-                trySend(value)
+                check(trySend(value).isSuccess) { "This should not haapen" }
             }
 
             override fun invokeOnClose(block: () -> Unit) {
