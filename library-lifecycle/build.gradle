@@ -38,3 +38,5 @@ dependencies {
     compileOnly deps.lifecycle
     compileOnly deps.liveData
 }
+
+apply from: "publish.gradle"

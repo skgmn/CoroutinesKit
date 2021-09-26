@@ -33,3 +33,5 @@ android {
 dependencies {
     api deps.coroutinesCore
 }
+
+apply from: "publish.gradle"
