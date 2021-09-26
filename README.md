@@ -1,7 +1,7 @@
 # coroutineskit
 
 ```gradle
-implementation "com.github.skgmn:coroutineskit:0.1.0"
+implementation "com.github.skgmn:coroutineskit:0.2.0"
 ```
 
 ## shareRefCount, stateRefCount
@@ -9,7 +9,7 @@ implementation "com.github.skgmn:coroutineskit:0.1.0"
 ```kotlin
 val flow: Flow<T> = ...
 val sharedFlow: SharedFlow<T> = flow.shareRefCount()
-val stateFlow: StateFlow<T> = flow.stateRefCount(initialValue)
+val stateFlow: StateFlow<T> = flow.stateRefCount { initialValue }
 ```
 
 Turns `Flow<T>` into `SharedFlow<T>` or `StateFlow<T>`. Unlike `shareIn()` or `stateIn()` it does not require any `CoroutineScope`. It subscribes the upstream when the downstream is firstly collected, and it cancels the upstream when the downstream is lastly completed so that it can be used like RxJava's `publish().refCount()` or `replay().refCount()`.
@@ -57,7 +57,7 @@ runWhile(conditionFlow) {
 # coroutineskit-lifecycle
 
 ```gradle
-implementation "com.github.skgmn:coroutineskit-lifecycle:0.1.0"
+implementation "com.github.skgmn:coroutineskit-lifecycle:0.2.0"
 ```
 
 ## isAtLeast

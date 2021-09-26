@@ -64,10 +64,10 @@ private class ListenerStateFlow<T>(
     override val value: T
         get() {
             val state = refCountState.get()
-            if (state != null) {
-                return state.stateFlow.value
+            return if (state != null) {
+                state.stateFlow.value
             } else {
-                return onGetInitialValue()
+                onGetInitialValue()
             }
         }
 
