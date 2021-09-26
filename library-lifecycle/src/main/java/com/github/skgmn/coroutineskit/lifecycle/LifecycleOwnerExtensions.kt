@@ -1,4 +1,4 @@
-package com.github.skgmn.coroutineutils.lifecycle
+package com.github.skgmn.coroutineskit.lifecycle
 
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner

@@ -1,4 +1,4 @@
-package com.github.skgmn.coroutineutils
+package com.github.skgmn.coroutineskit
 
 import kotlinx.coroutines.CancellationException
 

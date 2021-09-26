@@ -1,8 +1,8 @@
-package com.github.skgmn.coroutineutils.lifecycle
+package com.github.skgmn.coroutineskit.lifecycle
 
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import com.github.skgmn.coroutineutils.listenerStateFlow
+import com.github.skgmn.coroutineskit.listenerStateFlow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
 

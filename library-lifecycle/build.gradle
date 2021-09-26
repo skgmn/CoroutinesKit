@@ -31,7 +31,7 @@ android {
 
 dependencies {
     debugApi project(":library")
-    releaseApi "com.github.skgmn:coroutineutils:${ver.library}"
+    releaseApi "com.github.skgmn:coroutineskit:${ver.library}"
 
     api deps.coroutinesCore
 

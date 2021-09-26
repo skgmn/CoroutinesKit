@@ -1,26 +1,26 @@
-package com.github.skgmn.coroutineutils
+package com.github.skgmn.coroutineskit
 
 import kotlinx.coroutines.InternalCoroutinesApi
 import kotlinx.coroutines.flow.FlowCollector
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.coroutines.CoroutineContext
 
-fun <T> listenerSharedFlow(
-    replay: Int = 0,
+fun <T> listenerStateFlow(
+    initialValue: T,
     context: CoroutineContext? = null,
     block: ListenerFlowCollector<T>.() -> Unit
-): SharedFlow<T> {
-    return ListenerSharedFlow(replay, context, block)
+): StateFlow<T> {
+    return ListenerStateFlow(initialValue, context, block)
 }
 
-class ListenerSharedFlow<T> internal constructor(
-    replay: Int,
+class ListenerStateFlow<T> internal constructor(
+    initialValue: T,
     private val context: CoroutineContext?,
     private val block: ListenerFlowCollector<T>.() -> Unit
-) : SharedFlow<T>, ListenerFlowCollector<T> {
-    private val sharedFlow = MutableSharedFlow<T>(replay, Int.MAX_VALUE)
+) : StateFlow<T>, ListenerFlowCollector<T> {
+    private val stateFlow = MutableStateFlow(initialValue)
     private val listenerState = AtomicReference<ListenerState?>()
 
     @OptIn(InternalCoroutinesApi::class)
@@ -30,7 +30,7 @@ class ListenerSharedFlow<T> internal constructor(
             withContextOrRun(context) { block() }
         }
         try {
-            sharedFlow.collect(collector)
+            stateFlow.collect(collector)
         } finally {
             decreaseRefCount()?.onClose?.let {
                 withContextOrRun(context) { it() }
@@ -39,10 +39,12 @@ class ListenerSharedFlow<T> internal constructor(
     }
 
     override val replayCache: List<T>
-        get() = sharedFlow.replayCache
+        get() = stateFlow.replayCache
+    override val value: T
+        get() = stateFlow.value
 
     override fun emit(value: T) {
-        check(sharedFlow.tryEmit(value)) { "Some consumers might be infinitely suspended.." }
+        stateFlow.value = value
     }
 
     override fun invokeOnClose(block: () -> Unit) {

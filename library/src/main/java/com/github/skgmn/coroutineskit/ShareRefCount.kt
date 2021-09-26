@@ -1,5 +1,6 @@
-package com.github.skgmn.coroutineutils
+package com.github.skgmn.coroutineskit
 
+import com.github.skgmn.coroutineskit.CollectorDisposedException
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
