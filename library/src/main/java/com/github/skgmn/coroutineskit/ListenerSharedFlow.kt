@@ -1,6 +1,8 @@
 package com.github.skgmn.coroutineskit
 
 import kotlinx.coroutines.InternalCoroutinesApi
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -9,18 +11,25 @@ import kotlin.coroutines.CoroutineContext
 
 fun <T> listenerSharedFlow(
     replay: Int = 0,
+    extraBufferCapacity: Int = Channel.UNLIMITED,
+    onBufferOverflow: BufferOverflow = BufferOverflow.DROP_OLDEST,
     context: CoroutineContext? = null,
     block: ListenerFlowCollector<T>.() -> Unit
 ): SharedFlow<T> {
-    return ListenerSharedFlow(replay, context, block)
+    require(onBufferOverflow != BufferOverflow.SUSPEND) {
+        "SUSPEND mode is not supported because listeners are not suspend functions."
+    }
+    return ListenerSharedFlow(replay, extraBufferCapacity, onBufferOverflow, context, block)
 }
 
-class ListenerSharedFlow<T> internal constructor(
+private class ListenerSharedFlow<T>(
     replay: Int,
+    extraBufferCapacity: Int,
+    onBufferOverflow: BufferOverflow,
     private val context: CoroutineContext?,
     private val block: ListenerFlowCollector<T>.() -> Unit
 ) : SharedFlow<T>, ListenerFlowCollector<T> {
-    private val sharedFlow = MutableSharedFlow<T>(replay, Int.MAX_VALUE)
+    private val sharedFlow = MutableSharedFlow<T>(replay, extraBufferCapacity, onBufferOverflow)
     private val listenerState = AtomicReference<ListenerState?>()
 
     @OptIn(InternalCoroutinesApi::class)
@@ -42,7 +51,7 @@ class ListenerSharedFlow<T> internal constructor(
         get() = sharedFlow.replayCache
 
     override fun emit(value: T) {
-        check(sharedFlow.tryEmit(value)) { "Some consumers might be infinitely suspended.." }
+        check(sharedFlow.tryEmit(value)) { "This should not haapen" }
     }
 
     override fun invokeOnClose(block: () -> Unit) {

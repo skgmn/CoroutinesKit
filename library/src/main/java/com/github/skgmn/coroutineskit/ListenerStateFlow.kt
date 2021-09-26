@@ -15,7 +15,7 @@ fun <T> listenerStateFlow(
     return ListenerStateFlow(initialValue, context, block)
 }
 
-class ListenerStateFlow<T> internal constructor(
+private class ListenerStateFlow<T>(
     initialValue: T,
     private val context: CoroutineContext?,
     private val block: ListenerFlowCollector<T>.() -> Unit
