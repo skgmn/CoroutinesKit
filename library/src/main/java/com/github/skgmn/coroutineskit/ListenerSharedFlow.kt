@@ -2,7 +2,6 @@ package com.github.skgmn.coroutineskit
 
 import kotlinx.coroutines.InternalCoroutinesApi
 import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -11,7 +10,7 @@ import kotlin.coroutines.CoroutineContext
 
 fun <T> listenerSharedFlow(
     replay: Int = 0,
-    extraBufferCapacity: Int = Channel.UNLIMITED,
+    extraBufferCapacity: Int = 256,
     onBufferOverflow: BufferOverflow = BufferOverflow.DROP_OLDEST,
     context: CoroutineContext? = null,
     block: ListenerFlowCollector<T>.() -> Unit
