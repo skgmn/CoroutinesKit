@@ -1,10 +1,12 @@
 package com.github.skgmn.coroutineskit
 
 import kotlinx.coroutines.InternalCoroutinesApi
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.coroutines.CoroutineContext
 
@@ -29,81 +31,86 @@ fun <T> listenerSharedFlow(
     context: CoroutineContext? = null,
     block: ListenerFlowCollector<T>.() -> Unit
 ): SharedFlow<T> {
-    require(onBufferOverflow != BufferOverflow.SUSPEND) {
-        "SUSPEND mode is not supported because listeners are not suspend functions."
+    // I don't know why but MutableStateFlow with zero capacity always fails with tryEmit()
+    require(extraBufferCapacity > 0) {
+        "extraBufferCapacity should be greater than zero, or value would never be delivered"
     }
     return ListenerSharedFlow(replay, extraBufferCapacity, onBufferOverflow, context, block)
 }
 
 private class ListenerSharedFlow<T>(
-    replay: Int,
-    extraBufferCapacity: Int,
-    onBufferOverflow: BufferOverflow,
+    private val replay: Int,
+    private val extraBufferCapacity: Int,
+    private val onBufferOverflow: BufferOverflow,
     private val context: CoroutineContext?,
     private val block: ListenerFlowCollector<T>.() -> Unit
-) : SharedFlow<T>, ListenerFlowCollector<T> {
-    private val sharedFlow = MutableSharedFlow<T>(replay, extraBufferCapacity, onBufferOverflow)
-    private val listenerState = AtomicReference<ListenerState?>()
+) : SharedFlow<T> {
+    private val refCountState = AtomicReference<RefCountState<T>?>()
 
     @OptIn(InternalCoroutinesApi::class)
     override suspend fun collect(collector: FlowCollector<T>) {
         val state = increaseRefCount()
         if (state.refCount == 1) {
-            withContextOrRun(context) { block() }
+            context?.let { withContext(it) { state.block() } } ?: state.block()
         }
         try {
-            sharedFlow.collect(collector)
+            state.sharedFlow.collect(collector)
         } finally {
-            decreaseRefCount()?.onClose?.let {
-                withContextOrRun(context) { it() }
+            decreaseRefCount()?.onClose?.let { onClose ->
+                context?.let { withContext(it + NonCancellable) { onClose() } } ?: onClose()
             }
         }
     }
 
     override val replayCache: List<T>
-        get() = sharedFlow.replayCache
+        get() = refCountState.get()?.sharedFlow?.replayCache ?: emptyList()
 
-    override fun emit(value: T) {
-        check(sharedFlow.tryEmit(value)) { "This should not haapen" }
-    }
-
-    override fun invokeOnClose(block: () -> Unit) {
-        while (true) {
-            val curState = listenerState.get() ?: return
-            val newState = curState.copy(onClose = block)
-            if (listenerState.compareAndSet(curState, newState)) {
-                return
-            }
+    private fun increaseRefCount(): RefCountState<T> {
+        val newSharedFlow by lazy(LazyThreadSafetyMode.NONE) {
+            MutableSharedFlow<T>(replay, extraBufferCapacity, onBufferOverflow)
         }
-    }
-
-    private fun increaseRefCount(): ListenerState {
         while (true) {
-            val curState = listenerState.get()
-            val newState = curState?.copy(refCount = curState.refCount + 1)
-                ?: ListenerState(1, null)
-            if (listenerState.compareAndSet(curState, newState)) {
+            val curState = refCountState.get()
+            val newState = curState?.run { copy(refCount = refCount + 1) }
+                ?: RefCountState(this, 1, null, newSharedFlow)
+            if (refCountState.compareAndSet(curState, newState)) {
                 return newState
             }
         }
     }
 
-    private fun decreaseRefCount(): ListenerState? {
+    private fun decreaseRefCount(): RefCountState<T>? {
         while (true) {
-            val curState = listenerState.get() ?: return null
+            val curState = refCountState.get() ?: return null
             val newState = if (curState.refCount == 1) {
                 null
             } else {
                 curState.copy(refCount = curState.refCount - 1)
             }
-            if (listenerState.compareAndSet(curState, newState)) {
+            if (refCountState.compareAndSet(curState, newState)) {
                 return curState.takeIf { newState == null }
             }
         }
     }
 
-    private data class ListenerState(
+    private data class RefCountState<T>(
+        val outer: ListenerSharedFlow<T>,
         val refCount: Int,
-        val onClose: (() -> Unit)?
-    )
+        val onClose: (() -> Unit)?,
+        val sharedFlow: MutableSharedFlow<T>
+    ) : ListenerFlowCollector<T> {
+        override fun emit(value: T): Boolean {
+            return sharedFlow.tryEmit(value)
+        }
+
+        override fun invokeOnClose(block: () -> Unit) {
+            while (true) {
+                val curState = outer.refCountState.get() ?: return
+                val newState = curState.copy(onClose = block)
+                if (outer.refCountState.compareAndSet(curState, newState)) {
+                    return
+                }
+            }
+        }
+    }
 }

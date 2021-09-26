@@ -11,15 +11,15 @@ import kotlin.coroutines.CoroutineContext
  * the upstream when the downstream is firstly collected, and it cancels the upstream when the
  * downstream is lastly completed so that it can be used like RxJava's replay(1).refCount().
  */
-fun <T> Flow<T>.stateRefCount(initialValue: T): StateFlow<T> {
-    return RefCountStateFlow(this, initialValue)
+fun <T> Flow<T>.stateRefCount(onGetInitialValue : () -> T): StateFlow<T> {
+    return RefCountStateFlow(this, onGetInitialValue)
 }
 
 @Suppress("UNCHECKED_CAST")
 @OptIn(ExperimentalCoroutinesApi::class, InternalCoroutinesApi::class, DelicateCoroutinesApi::class)
 private class RefCountStateFlow<T>(
     private val source: Flow<T>,
-    private val initialValue: T
+    private val onGetInitialValue : () -> T
 ) : StateFlow<T>, FusibleFlow<T> {
     private val lock = Any()
     private var collectorState: CollectorState<T>? = null
@@ -27,7 +27,7 @@ private class RefCountStateFlow<T>(
     override suspend fun collect(collector: FlowCollector<T>) {
         val currentState = synchronized(lock) {
             collectorState?.also { ++it.refCount }
-                ?: CollectorState(source, initialValue).also { collectorState = it }
+                ?: CollectorState(source, onGetInitialValue()).also { collectorState = it }
         }
         try {
             currentState.collect(collector)
@@ -42,10 +42,17 @@ private class RefCountStateFlow<T>(
     }
 
     override val replayCache: List<T>
-        get() = synchronized(lock) { collectorState?.replayCache ?: emptyList() }
+        get() = synchronized(lock) { collectorState?.replayCache ?: listOf(onGetInitialValue()) }
 
     override val value: T
-        get() = synchronized(lock) { collectorState?.value ?: initialValue }
+        get() = synchronized(lock) {
+            val state = collectorState
+            if (state != null) {
+                state.value
+            } else {
+                onGetInitialValue()
+            }
+        }
 
     override fun fuse(
         context: CoroutineContext,

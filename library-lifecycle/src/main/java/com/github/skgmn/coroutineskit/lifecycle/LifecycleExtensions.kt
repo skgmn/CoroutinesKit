@@ -7,7 +7,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
 
 fun Lifecycle.isAtLeast(state: Lifecycle.State): StateFlow<Boolean> {
-    return listenerStateFlow(currentState.isAtLeast(state), Dispatchers.Main.immediate) {
+    return listenerStateFlow(
+        onGetInitialValue = { currentState.isAtLeast(state) },
+        context = Dispatchers.Main.immediate
+    ) {
         val observer = LifecycleEventObserver { source, _ ->
             emit(source.lifecycle.currentState.isAtLeast(state))
         }

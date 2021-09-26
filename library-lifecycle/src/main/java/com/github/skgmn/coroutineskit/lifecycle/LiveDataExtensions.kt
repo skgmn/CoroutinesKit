@@ -6,7 +6,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
 
 fun <T: Any> LiveData<T>.toStateFlow(): StateFlow<T?> {
-    return listenerStateFlow(value, Dispatchers.Main.immediate) {
+    return listenerStateFlow(
+        onGetInitialValue = { value },
+        context = Dispatchers.Main.immediate
+    ) {
         val observer: (T) -> Unit = { emit(it) }
         observeForever(observer)
         invokeOnClose { removeObserver(observer) }
