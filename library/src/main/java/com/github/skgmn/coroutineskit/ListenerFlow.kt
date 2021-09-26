@@ -1,5 +1,6 @@
 package com.github.skgmn.coroutineskit
 
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.awaitClose
@@ -27,17 +28,14 @@ import kotlin.coroutines.CoroutineContext
 fun <T> listenerFlow(
     extraBufferCapacity: Int = 256,
     onBufferOverflow: BufferOverflow = BufferOverflow.DROP_OLDEST,
-    context: CoroutineContext? = null,
+    context: CoroutineContext? = Dispatchers.Main.immediate,
     block: ListenerFlowCollector<T>.() -> Unit
 ): Flow<T> {
-    require(onBufferOverflow != BufferOverflow.SUSPEND) {
-        "SUSPEND mode is not supported because listeners are not suspend functions."
-    }
     return channelFlow {
         var onClose: (() -> Unit)? = null
         val collector = object : ListenerFlowCollector<T> {
-            override fun emit(value: T) {
-                check(trySend(value).isSuccess) { "This should not haapen" }
+            override fun emit(value: T): Boolean {
+                return trySend(value).isSuccess
             }
 
             override fun invokeOnClose(block: () -> Unit) {

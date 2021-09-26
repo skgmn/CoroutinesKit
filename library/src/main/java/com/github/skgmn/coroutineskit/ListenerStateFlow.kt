@@ -1,9 +1,12 @@
 package com.github.skgmn.coroutineskit
 
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.InternalCoroutinesApi
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.coroutines.CoroutineContext
 
@@ -23,7 +26,7 @@ import kotlin.coroutines.CoroutineContext
  */
 fun <T> listenerStateFlow(
     initialValue: T,
-    context: CoroutineContext? = null,
+    context: CoroutineContext? = Dispatchers.Main.immediate,
     block: ListenerFlowCollector<T>.() -> Unit
 ): StateFlow<T> {
     return ListenerStateFlow(initialValue, context, block)
@@ -41,13 +44,13 @@ private class ListenerStateFlow<T>(
     override suspend fun collect(collector: FlowCollector<T>) {
         val state = increaseRefCount()
         if (state.refCount == 1) {
-            withContextOrRun(context) { block() }
+            context?.let { withContext(it) { block() } } ?: block()
         }
         try {
             stateFlow.collect(collector)
         } finally {
-            decreaseRefCount()?.onClose?.let {
-                withContextOrRun(context) { it() }
+            decreaseRefCount()?.onClose?.let { onClose ->
+                context?.let { withContext(it + NonCancellable) { onClose() } } ?: onClose()
             }
         }
     }
@@ -57,8 +60,9 @@ private class ListenerStateFlow<T>(
     override val value: T
         get() = stateFlow.value
 
-    override fun emit(value: T) {
+    override fun emit(value: T): Boolean {
         stateFlow.value = value
+        return true
     }
 
     override fun invokeOnClose(block: () -> Unit) {

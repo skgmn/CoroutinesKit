@@ -1,10 +1,13 @@
 package com.github.skgmn.coroutineskit
 
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.InternalCoroutinesApi
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.coroutines.CoroutineContext
 
@@ -26,11 +29,12 @@ fun <T> listenerSharedFlow(
     replay: Int = 0,
     extraBufferCapacity: Int = 256,
     onBufferOverflow: BufferOverflow = BufferOverflow.DROP_OLDEST,
-    context: CoroutineContext? = null,
+    context: CoroutineContext? = Dispatchers.Main.immediate,
     block: ListenerFlowCollector<T>.() -> Unit
 ): SharedFlow<T> {
-    require(onBufferOverflow != BufferOverflow.SUSPEND) {
-        "SUSPEND mode is not supported because listeners are not suspend functions."
+    // I don't know why but MutableStateFlow with zero capacity always fails with tryEmit()
+    require(extraBufferCapacity > 0) {
+        "extraBufferCapacity should be greater than zero, or value would never be delivered"
     }
     return ListenerSharedFlow(replay, extraBufferCapacity, onBufferOverflow, context, block)
 }
@@ -49,13 +53,13 @@ private class ListenerSharedFlow<T>(
     override suspend fun collect(collector: FlowCollector<T>) {
         val state = increaseRefCount()
         if (state.refCount == 1) {
-            withContextOrRun(context) { block() }
+            context?.let { withContext(it) { block() } } ?: block()
         }
         try {
             sharedFlow.collect(collector)
         } finally {
-            decreaseRefCount()?.onClose?.let {
-                withContextOrRun(context) { it() }
+            decreaseRefCount()?.onClose?.let { onClose ->
+                context?.let { withContext(it + NonCancellable) { onClose() } } ?: onClose()
             }
         }
     }
@@ -63,8 +67,8 @@ private class ListenerSharedFlow<T>(
     override val replayCache: List<T>
         get() = sharedFlow.replayCache
 
-    override fun emit(value: T) {
-        check(sharedFlow.tryEmit(value)) { "This should not haapen" }
+    override fun emit(value: T): Boolean {
+        return sharedFlow.tryEmit(value)
     }
 
     override fun invokeOnClose(block: () -> Unit) {
