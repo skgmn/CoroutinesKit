@@ -33,10 +33,10 @@ dependencies {
     debugApi project(":library")
     releaseApi "com.github.skgmn:coroutineskit:${ver.library}"
 
-    api deps.coroutinesCore
+    api dep.coroutinesCore
 
-    compileOnly deps.lifecycle
-    compileOnly deps.liveData
+    compileOnly dep.lifecycle
+    compileOnly dep.liveData
 }
 
 apply from: "publish.gradle"
