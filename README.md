@@ -1,4 +1,8 @@
-# coroutineutils
+# coroutineskit
+
+```gradle
+implementation "com.github.skgmn:coroutineskit:0.1.0"
+```
 
 ## shareRefCount, stateRefCount
 
@@ -8,7 +12,7 @@ val sharedFlow: SharedFlow<T> = flow.shareRefCount()
 val stateFlow: StateFlow<T> = flow.stateRefCount(initialValue)
 ```
 
-Turns `Flow<T>` into `SharedFlow<T>` or `StateFlow<T>`. Unlike `shareIn()` or `stateIn()` it does not require any `CoroutineScope`. It subscribe the upstream when the downstream is firstly collected, and it cancels the upstream when the downstream is lastly cancelled so that it can be used like RxJava's `publish().refCount()` or `replay(1).refCount()`.
+Turns `Flow<T>` into `SharedFlow<T>` or `StateFlow<T>`. Unlike `shareIn()` or `stateIn()` it does not require any `CoroutineScope`. It subscribes the upstream when the downstream is firstly collected, and it cancels the upstream when the downstream is lastly completed so that it can be used like RxJava's `publish().refCount()` or `replay().refCount()`.
 
 ## listenerFlow, listenerSharedFlow, listenerStateFlow
 
@@ -24,7 +28,7 @@ val flow = listenerFlow(Dispatchers.Main.immediate) {
 
 These have been created because
 1. `callbackFlow` is still experimental.
-2. Developer has to consider backpressure every time `callbackFlow` is used.
+2. `callbackFlow` does not have proper default values for backpressure I think.
 3. `callbackFlow` cannot create `SharedFlow` and `StateFlow`.
 
 ## stateMap, stateCombine
@@ -37,7 +41,7 @@ val map1 = stateFlow.map { it * 2 }      // This is Flow<Int>
 val map2 = stateFlow.stateMap { it * 2 } // This is StateFlow<Int>
 ```
 
-It only accepts not suspending lambda.
+It only accepts non-suspend lambda.
 
 ## runWhile
 
@@ -50,7 +54,11 @@ runWhile(conditionFlow) {
 }
 ```
 
-# coroutineutils-lifecycle
+# coroutineskit-lifecycle
+
+```gradle
+implementation "com.github.skgmn:coroutineskit-lifecycle:0.1.0"
+```
 
 ## isAtLeast
 
@@ -64,7 +72,7 @@ fun LifecycleOwner.isAtLeast(state: Lifecycle.State): StateFlow<Boolean>
 ```kotlin
 whenStarted {
     runWhile(isAtLeast(State.STARTED)) {
-        // Code here runs "once" between onStart() and onStop().
+        // Code here starts on onStart() and stops on onStop().
     }
 }
 ```
