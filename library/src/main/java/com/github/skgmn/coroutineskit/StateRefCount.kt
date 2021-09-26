@@ -1,12 +1,16 @@
 package com.github.skgmn.coroutineskit
 
-import com.github.skgmn.coroutineskit.CollectorDisposedException
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.flow.internal.FusibleFlow
 import kotlin.coroutines.CoroutineContext
 
+/**
+ * Turns Flow into StateFlow. Unlike stateIn() it does not require any CoroutineScope. It subscribes
+ * the upstream when the downstream is firstly collected, and it cancels the upstream when the
+ * downstream is lastly completed so that it can be used like RxJava's replay(1).refCount().
+ */
 fun <T> Flow<T>.stateRefCount(initialValue: T): StateFlow<T> {
     return RefCountStateFlow(this, initialValue)
 }

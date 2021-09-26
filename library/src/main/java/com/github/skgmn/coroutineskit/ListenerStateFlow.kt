@@ -7,6 +7,20 @@ import kotlinx.coroutines.flow.StateFlow
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.coroutines.CoroutineContext
 
+/**
+ * Turns observer pattern into StateFlow. It can be used like this:
+ *
+ * ```kotlin
+ * val stateFlow = listenerStateFlow(initialValue, Dispatchers.Main.immediate) {
+ *     val listener = { emit(it) }
+ *     addListener(listener)
+ *     invokeOnClose { removeListener(listener) }
+ * }
+ * ```
+ *
+ * @param context [CoroutineContext] which [block] runs with. When it's null, it would be run with
+ *   the same coroutine context of the first flow collector.
+ */
 fun <T> listenerStateFlow(
     initialValue: T,
     context: CoroutineContext? = null,

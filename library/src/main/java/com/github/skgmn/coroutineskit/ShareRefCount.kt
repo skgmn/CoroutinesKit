@@ -1,6 +1,5 @@
 package com.github.skgmn.coroutineskit
 
-import com.github.skgmn.coroutineskit.CollectorDisposedException
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
@@ -10,6 +9,12 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.coroutines.CoroutineContext
 
+/**
+ * Turns Flow into SharedFlow. Unlike shareIn() it does not require any CoroutineScope.
+ * It subscribes the upstream when the downstream is firstly collected, and it cancels the upstream
+ * when the downstream is lastly completed so that it can be used like RxJava's publish().refCount()
+ * or replay(n).refCount() where n equals to [replay].
+ */
 fun <T> Flow<T>.shareRefCount(
     replay: Int = 0,
     extraBufferCapacity: Int = 0,

@@ -6,6 +6,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.dropWhile
 import kotlinx.coroutines.flow.firstOrNull
 
+/**
+ * Run block only while the given Flow<Boolean> emits true. It can be used similarly to RxJava's
+ * takeUntil() operator.
+ */
 @OptIn(DelicateCoroutinesApi::class)
 suspend fun <R> runWhile(condition: Flow<Boolean>, block: suspend CoroutineScope.() -> R): R {
     return coroutineScope {
@@ -25,6 +29,10 @@ suspend fun <R> runWhile(condition: Flow<Boolean>, block: suspend CoroutineScope
     }
 }
 
+/**
+ * Run block only while the given StateFlow<Boolean> emits true. It can be used similarly to
+ * RxJava's takeUntil() operator.
+ */
 @OptIn(DelicateCoroutinesApi::class)
 suspend fun <R> runWhile(condition: StateFlow<Boolean>, block: suspend CoroutineScope.() -> R): R {
     return coroutineScope {
