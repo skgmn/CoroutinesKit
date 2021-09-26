@@ -62,7 +62,14 @@ private class ListenerStateFlow<T>(
     override val replayCache: List<T>
         get() = refCountState.get()?.stateFlow?.replayCache ?: listOf(onGetInitialValue())
     override val value: T
-        get() = refCountState.get()?.stateFlow?.value ?: onGetInitialValue()
+        get() {
+            val state = refCountState.get()
+            if (state != null) {
+                return state.stateFlow.value
+            } else {
+                return onGetInitialValue()
+            }
+        }
 
     private fun increaseRefCount(): RefCountState<T> {
         val newStateFlow by lazy(LazyThreadSafetyMode.NONE) {
