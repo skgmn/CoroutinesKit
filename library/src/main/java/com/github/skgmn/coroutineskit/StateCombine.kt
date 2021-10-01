@@ -1,3 +1,5 @@
+@file:Suppress("UNCHECKED_CAST")
+
 package com.github.skgmn.lang
 
 import kotlinx.coroutines.InternalCoroutinesApi
@@ -9,21 +11,20 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
-@Suppress("UNCHECKED_CAST")
 @OptIn(ObsoleteCoroutinesApi::class)
-private class StateCombine<T, R>(
-    private val sources: Array<out StateFlow<T>>,
-    private val transform: (Array<T>) -> R
+private class StateCombine<R>(
+    private val sources: Array<out StateFlow<Any?>>,
+    private val transform: (Array<Any?>) -> R
 ) : StateFlow<R> {
     @InternalCoroutinesApi
     override suspend fun collect(collector: FlowCollector<R>) {
         val latestValues = Array<Any?>(sources.size) { sources[it].value }
-        collector.emit(transform(latestValues as Array<T>))
+        collector.emit(transform(latestValues))
         coroutineScope {
-            val actor = actor<SourceEmission<T>> {
+            val actor = actor<SourceEmission> {
                 for (emission in channel) {
                     latestValues[emission.index] = emission.value
-                    collector.emit(transform(latestValues as Array<T>))
+                    collector.emit(transform(latestValues))
                 }
             }
             for (i in sources.indices) {
@@ -42,57 +43,140 @@ private class StateCombine<T, R>(
 
     override val value: R
         get() {
-            val values = Array<Any?>(sources.size) { sources[it].value }
-            return transform(values as Array<T>)
+            val values = Array(sources.size) { sources[it].value }
+            return transform(values)
         }
 
-    private class SourceEmission<T>(
+    private class SourceEmission(
         val index: Int,
-        val value: T
+        val value: Any?
     )
 }
 
-fun <T, R> stateCombine(
-    source1: StateFlow<T>,
-    source2: StateFlow<T>,
-    transform: (T, T) -> R
+fun <T1, T2, R> stateCombine(
+    source1: StateFlow<T1>,
+    source2: StateFlow<T2>,
+    transform: (T1, T2) -> R
 ): StateFlow<R> =
     StateCombine(arrayOf(source1, source2)) { values ->
-        transform(values[0], values[1])
+        transform(values[0] as T1, values[1] as T2)
     }
 
-fun <T, R> stateCombine(
-    source1: StateFlow<T>,
-    source2: StateFlow<T>,
-    source3: StateFlow<T>,
-    transform: (T, T, T) -> R
+fun <T1, T2, T3, R> stateCombine(
+    source1: StateFlow<T1>,
+    source2: StateFlow<T2>,
+    source3: StateFlow<T3>,
+    transform: (T1, T2, T3) -> R
 ): StateFlow<R> =
     StateCombine(arrayOf(source1, source2, source3)) { values ->
-        transform(values[0], values[1], values[2])
+        transform(values[0] as T1, values[1] as T2, values[2] as T3)
     }
 
-fun <T, R> stateCombine(
-    source1: StateFlow<T>,
-    source2: StateFlow<T>,
-    source3: StateFlow<T>,
-    source4: StateFlow<T>,
-    transform: (T, T, T, T) -> R
+fun <T1, T2, T3, T4, R> stateCombine(
+    source1: StateFlow<T1>,
+    source2: StateFlow<T2>,
+    source3: StateFlow<T3>,
+    source4: StateFlow<T4>,
+    transform: (T1, T2, T3, T4) -> R
 ): StateFlow<R> =
     StateCombine(arrayOf(source1, source2, source3, source4)) { values ->
-        transform(values[0], values[1], values[2], values[3])
+        transform(values[0] as T1, values[1] as T2, values[2] as T3, values[3] as T4)
     }
 
-fun <T, R> stateCombine(
-    source1: StateFlow<T>,
-    source2: StateFlow<T>,
-    source3: StateFlow<T>,
-    source4: StateFlow<T>,
-    source5: StateFlow<T>,
-    transform: (T, T, T, T, T) -> R
+fun <T1, T2, T3, T4, T5, R> stateCombine(
+    source1: StateFlow<T1>,
+    source2: StateFlow<T2>,
+    source3: StateFlow<T3>,
+    source4: StateFlow<T4>,
+    source5: StateFlow<T5>,
+    transform: (T1, T2, T3, T4, T5) -> R
 ): StateFlow<R> =
     StateCombine(arrayOf(source1, source2, source3, source4, source5)) { values ->
-        transform(values[0], values[1], values[2], values[3], values[4])
+        transform(
+            values[0] as T1,
+            values[1] as T2,
+            values[2] as T3,
+            values[3] as T4,
+            values[4] as T5
+        )
+    }
+
+fun <T1, T2, T3, T4, T5, T6, R> stateCombine(
+    source1: StateFlow<T1>,
+    source2: StateFlow<T2>,
+    source3: StateFlow<T3>,
+    source4: StateFlow<T4>,
+    source5: StateFlow<T5>,
+    source6: StateFlow<T6>,
+    transform: (T1, T2, T3, T4, T5, T6) -> R
+): StateFlow<R> =
+    StateCombine(arrayOf(source1, source2, source3, source4, source5, source6)) { values ->
+        transform(
+            values[0] as T1,
+            values[1] as T2,
+            values[2] as T3,
+            values[3] as T4,
+            values[4] as T5,
+            values[5] as T6
+        )
+    }
+
+fun <T1, T2, T3, T4, T5, T6, T7, R> stateCombine(
+    source1: StateFlow<T1>,
+    source2: StateFlow<T2>,
+    source3: StateFlow<T3>,
+    source4: StateFlow<T4>,
+    source5: StateFlow<T5>,
+    source6: StateFlow<T6>,
+    source7: StateFlow<T7>,
+    transform: (T1, T2, T3, T4, T5, T6, T7) -> R
+): StateFlow<R> =
+    StateCombine(arrayOf(source1, source2, source3, source4, source5, source6, source7)) { values ->
+        transform(
+            values[0] as T1,
+            values[1] as T2,
+            values[2] as T3,
+            values[3] as T4,
+            values[4] as T5,
+            values[5] as T6,
+            values[5] as T7
+        )
+    }
+
+fun <T1, T2, T3, T4, T5, T6, T7, T8, R> stateCombine(
+    source1: StateFlow<T1>,
+    source2: StateFlow<T2>,
+    source3: StateFlow<T3>,
+    source4: StateFlow<T4>,
+    source5: StateFlow<T5>,
+    source6: StateFlow<T6>,
+    source7: StateFlow<T7>,
+    source8: StateFlow<T8>,
+    transform: (T1, T2, T3, T4, T5, T6, T7, T8) -> R
+): StateFlow<R> =
+    StateCombine(
+        arrayOf(
+            source1,
+            source2,
+            source3,
+            source4,
+            source5,
+            source6,
+            source7,
+            source8
+        )
+    ) { values ->
+        transform(
+            values[0] as T1,
+            values[1] as T2,
+            values[2] as T3,
+            values[3] as T4,
+            values[4] as T5,
+            values[5] as T6,
+            values[5] as T7,
+            values[5] as T8
+        )
     }
 
 fun <T, R> stateCombine(vararg source: StateFlow<T>, transform: (Array<T>) -> R): StateFlow<R> =
-    StateCombine(source, transform)
+    StateCombine(source, transform as (Array<Any?>) -> R)
