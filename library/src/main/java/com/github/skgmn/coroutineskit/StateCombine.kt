@@ -18,13 +18,15 @@ private class StateCombine<R>(
 ) : StateFlow<R> {
     @InternalCoroutinesApi
     override suspend fun collect(collector: FlowCollector<R>) {
-        val latestValues = Array<Any?>(sources.size) { sources[it].value }
+        val latestValues = Array(sources.size) { sources[it].value }
         collector.emit(transform(latestValues))
         coroutineScope {
             val actor = actor<SourceEmission> {
                 for (emission in channel) {
-                    latestValues[emission.index] = emission.value
-                    collector.emit(transform(latestValues))
+                    if (latestValues[emission.index] != emission.value) {
+                        latestValues[emission.index] = emission.value
+                        collector.emit(transform(latestValues))
+                    }
                 }
             }
             for (i in sources.indices) {
