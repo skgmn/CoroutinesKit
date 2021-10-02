@@ -1,7 +1,7 @@
 # coroutineskit
 
 ```gradle
-implementation "com.github.skgmn:coroutineskit:0.2.0"
+implementation "com.github.skgmn:coroutineskit:0.3.0"
 ```
 
 ## shareRefCount, stateRefCount
@@ -54,10 +54,33 @@ runWhile(conditionFlow) {
 }
 ```
 
+## capture
+
+Same as RxJava's `withLatestFrom()`.
+
+```kotlin
+val flow: Flow<T>
+val flow1: Flow<T1>
+val flow2: Flow<T2>
+flow.capture(flow1, flow2) { source, one, two ->
+    someTransform(source, one, two)
+}
+```
+
+## chunked
+
+Same as RxJava's `buffer()`.
+
+```kotlin
+fun <T> Flow<T>.chunked(count: Int): Flow<List<T>>
+fun <T> Flow<T>.chunked(timeMillis: Long): Flow<List<T>>
+fun <T> Flow<T>.chunked(count: Int, timeMillis: Long): Flow<List<T>>
+```
+
 # coroutineskit-lifecycle
 
 ```gradle
-implementation "com.github.skgmn:coroutineskit-lifecycle:0.2.0"
+implementation "com.github.skgmn:coroutineskit-lifecycle:0.3.0"
 ```
 
 ## isAtLeast
