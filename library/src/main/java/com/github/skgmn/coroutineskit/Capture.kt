@@ -10,11 +10,11 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 
-fun <T, T1, R> Flow<T>.withLatestFrom(
+fun <T, T1, R> Flow<T>.capture(
     other: Flow<T1>,
     transform: suspend (T, T1) -> R
 ): Flow<R> {
-    return withLatestFromImpl(
+    return captureImpl(
         arrayOf(other)
     ) {
         transform(
@@ -24,12 +24,12 @@ fun <T, T1, R> Flow<T>.withLatestFrom(
     }
 }
 
-fun <T, T1, T2, R> Flow<T>.withLatestFrom(
+fun <T, T1, T2, R> Flow<T>.capture(
     other1: Flow<T1>,
     other2: Flow<T2>,
     transform: suspend (T, T1, T2) -> R
 ): Flow<R> {
-    return withLatestFromImpl(
+    return captureImpl(
         arrayOf(other1, other2)
     ) {
         transform(
@@ -40,13 +40,13 @@ fun <T, T1, T2, R> Flow<T>.withLatestFrom(
     }
 }
 
-fun <T, T1, T2, T3, R> Flow<T>.withLatestFrom(
+fun <T, T1, T2, T3, R> Flow<T>.capture(
     other1: Flow<T1>,
     other2: Flow<T2>,
     other3: Flow<T3>,
     transform: suspend (T, T1, T2, T3) -> R
 ): Flow<R> {
-    return withLatestFromImpl(
+    return captureImpl(
         arrayOf(other1, other2, other3)
     ) {
         transform(
@@ -58,14 +58,14 @@ fun <T, T1, T2, T3, R> Flow<T>.withLatestFrom(
     }
 }
 
-fun <T, T1, T2, T3, T4, R> Flow<T>.withLatestFrom(
+fun <T, T1, T2, T3, T4, R> Flow<T>.capture(
     other1: Flow<T1>,
     other2: Flow<T2>,
     other3: Flow<T3>,
     other4: Flow<T4>,
     transform: suspend (T, T1, T2, T3, T4) -> R
 ): Flow<R> {
-    return withLatestFromImpl(
+    return captureImpl(
         arrayOf(other1, other2, other3, other4)
     ) {
         transform(
@@ -78,7 +78,7 @@ fun <T, T1, T2, T3, T4, R> Flow<T>.withLatestFrom(
     }
 }
 
-fun <T, T1, T2, T3, T4, T5, R> Flow<T>.withLatestFrom(
+fun <T, T1, T2, T3, T4, T5, R> Flow<T>.capture(
     other1: Flow<T1>,
     other2: Flow<T2>,
     other3: Flow<T3>,
@@ -86,7 +86,7 @@ fun <T, T1, T2, T3, T4, T5, R> Flow<T>.withLatestFrom(
     other5: Flow<T5>,
     transform: suspend (T, T1, T2, T3, T4, T5) -> R
 ): Flow<R> {
-    return withLatestFromImpl(
+    return captureImpl(
         arrayOf(other1, other2, other3, other4, other5)
     ) {
         transform(
@@ -100,7 +100,7 @@ fun <T, T1, T2, T3, T4, T5, R> Flow<T>.withLatestFrom(
     }
 }
 
-fun <T, T1, T2, T3, T4, T5, T6, R> Flow<T>.withLatestFrom(
+fun <T, T1, T2, T3, T4, T5, T6, R> Flow<T>.capture(
     other1: Flow<T1>,
     other2: Flow<T2>,
     other3: Flow<T3>,
@@ -109,7 +109,7 @@ fun <T, T1, T2, T3, T4, T5, T6, R> Flow<T>.withLatestFrom(
     other6: Flow<T6>,
     transform: suspend (T, T1, T2, T3, T4, T5, T6) -> R
 ): Flow<R> {
-    return withLatestFromImpl(
+    return captureImpl(
         arrayOf(other1, other2, other3, other4, other5, other6)
     ) {
         transform(
@@ -124,7 +124,7 @@ fun <T, T1, T2, T3, T4, T5, T6, R> Flow<T>.withLatestFrom(
     }
 }
 
-fun <T, T1, T2, T3, T4, T5, T6, T7, R> Flow<T>.withLatestFrom(
+fun <T, T1, T2, T3, T4, T5, T6, T7, R> Flow<T>.capture(
     other1: Flow<T1>,
     other2: Flow<T2>,
     other3: Flow<T3>,
@@ -134,7 +134,7 @@ fun <T, T1, T2, T3, T4, T5, T6, T7, R> Flow<T>.withLatestFrom(
     other7: Flow<T7>,
     transform: suspend (T, T1, T2, T3, T4, T5, T6, T7) -> R
 ): Flow<R> {
-    return withLatestFromImpl(
+    return captureImpl(
         arrayOf(other1, other2, other3, other4, other5, other6, other7)
     ) {
         transform(
@@ -150,7 +150,7 @@ fun <T, T1, T2, T3, T4, T5, T6, T7, R> Flow<T>.withLatestFrom(
     }
 }
 
-fun <T, T1, T2, T3, T4, T5, T6, T7, T8, R> Flow<T>.withLatestFrom(
+fun <T, T1, T2, T3, T4, T5, T6, T7, T8, R> Flow<T>.capture(
     other1: Flow<T1>,
     other2: Flow<T2>,
     other3: Flow<T3>,
@@ -161,7 +161,7 @@ fun <T, T1, T2, T3, T4, T5, T6, T7, T8, R> Flow<T>.withLatestFrom(
     other8: Flow<T8>,
     transform: suspend (T, T1, T2, T3, T4, T5, T6, T7, T8) -> R
 ): Flow<R> {
-    return withLatestFromImpl(
+    return captureImpl(
         arrayOf(other1, other2, other3, other4, other5, other6, other7, other8)
     ) {
         transform(
@@ -178,15 +178,15 @@ fun <T, T1, T2, T3, T4, T5, T6, T7, T8, R> Flow<T>.withLatestFrom(
     }
 }
 
-fun <T, R> Flow<T>.withLatestFrom(
+fun <T, R> Flow<T>.capture(
     others: Array<Flow<T>>,
     transform: suspend (Array<T>) -> R
 ): Flow<R> {
-    return withLatestFromImpl(others as Array<Flow<Any?>>, transform as suspend (Array<Any?>) -> R)
+    return captureImpl(others as Array<Flow<Any?>>, transform as suspend (Array<Any?>) -> R)
 }
 
 @Suppress("UNCHECKED_CAST")
-private fun <R> Flow<*>.withLatestFromImpl(
+private fun <R> Flow<*>.captureImpl(
     others: Array<Flow<Any?>>,
     transform: suspend (Array<Any?>) -> R
 ): Flow<R> {
