@@ -1,4 +1,4 @@
-package com.github.skgmn.lang
+package com.github.skgmn.coroutineskit
 
 import kotlinx.coroutines.InternalCoroutinesApi
 import kotlinx.coroutines.flow.FlowCollector

@@ -1,29 +1,16 @@
 plugins {
-    id 'com.android.library'
-    id 'kotlin-android'
+    id 'java-library'
+    id 'kotlin'
 }
 
-android {
-    compileSdk ver.sdk
+java {
+    withSourcesJar()
 
-    defaultConfig {
-        minSdk 16
-        targetSdk ver.sdk
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}
 
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-        consumerProguardFiles "consumer-rules.pro"
-    }
-
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-        }
-    }
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
-    }
+compileKotlin {
     kotlinOptions {
         jvmTarget = '1.8'
         freeCompilerArgs += "-Xopt-in=kotlin.RequiresOptIn"

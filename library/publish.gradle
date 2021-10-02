@@ -1,11 +1,6 @@
 apply plugin: "maven-publish"
 apply plugin: "signing"
 
-task sourceJar(type: Jar) {
-    from android.sourceSets.main.java.srcDirs
-    classifier "sources"
-}
-
 afterEvaluate {
     publishing {
         repositories {
@@ -19,13 +14,11 @@ afterEvaluate {
         }
         publications {
             release(MavenPublication) {
-                from components.release
+                from components.java
 
                 groupId = 'com.github.skgmn'
                 artifactId = 'coroutineskit'
                 version = ver.library
-
-                artifact(sourceJar)
 
                 pom {
                     name = "CoroutinesKit"
