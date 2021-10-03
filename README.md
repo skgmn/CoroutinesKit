@@ -1,7 +1,7 @@
 # coroutineskit
 
 ```gradle
-implementation "com.github.skgmn:coroutineskit:0.3.0"
+implementation "com.github.skgmn:coroutineskit:0.3.1"
 ```
 
 ## shareRefCount, stateRefCount
@@ -80,7 +80,7 @@ fun <T> Flow<T>.chunked(count: Int, timeMillis: Long): Flow<List<T>>
 # coroutineskit-lifecycle
 
 ```gradle
-implementation "com.github.skgmn:coroutineskit-lifecycle:0.3.0"
+implementation "com.github.skgmn:coroutineskit-lifecycle:0.3.1"
 ```
 
 ## isAtLeast
