@@ -17,26 +17,62 @@ class StateCombine<T, R>(
     private val clone: ((Array<Any?>) -> Array<T>)? = null,
     private val transform: (Array<T>) -> R
 ) : StateFlow<R> {
+    private val lock = Any()
+
+    private val sourceValues: Array<Any?> = Array(sources.size) { InvalidValue }
+
+    @Volatile
+    private var collecting = false
+
+    @Volatile
+    private var transformedValue: Any? = InvalidValue
+
     @InternalCoroutinesApi
     override suspend fun collect(collector: FlowCollector<R>) {
-        val latestValues = Array(sources.size) { sources[it].value }
-        collector.emit(transform(clone(latestValues)))
-        coroutineScope {
-            val actor = actor<SourceEmission> {
-                for (emission in channel) {
-                    if (latestValues[emission.index] != emission.value) {
-                        latestValues[emission.index] = emission.value
-                        collector.emit(transform(clone(latestValues)))
+        synchronized(lock) {
+            collecting = true
+            sourceValues.indices.forEach { sourceValues[it] = InvalidValue }
+            transformedValue = InvalidValue
+        }
+        try {
+            coroutineScope {
+                var ready = false
+                val actor = actor<SourceEmission> {
+                    for (emission in channel) {
+                        val value = synchronized(lock) {
+                            if (sourceValues[emission.index] != emission.value) {
+                                sourceValues[emission.index] = emission.value
+                                if (ready || sourceValues.all { it !== InvalidValue }) {
+                                    ready = true
+                                    transform(clone(sourceValues)).also {
+                                        transformedValue = it
+                                    }
+                                } else {
+                                    InvalidValue
+                                }
+                            } else {
+                                InvalidValue
+                            }
+                        }
+                        if (value !== InvalidValue) {
+                            collector.emit(value as R)
+                        }
+                    }
+                }
+                for (i in sources.indices) {
+                    val source = sources[i]
+                    launch {
+                        source.collect {
+                            actor.send(SourceEmission(i, it))
+                        }
                     }
                 }
             }
-            for (i in sources.indices) {
-                val source = sources[i]
-                launch {
-                    source.collect {
-                        actor.send(SourceEmission(i, it))
-                    }
-                }
+        } finally {
+            synchronized(lock) {
+                sourceValues.indices.forEach { sourceValues[it] = InvalidValue }
+                transformedValue = InvalidValue
+                collecting = false
             }
         }
     }
@@ -50,8 +86,23 @@ class StateCombine<T, R>(
 
     override val value: R
         get() {
-            val values = Array(sources.size) { sources[it].value }
-            return transform(clone(values))
+            return synchronized(lock) {
+                val values = Array(sources.size) { sources[it].value }
+                if (transformedValue === InvalidValue ||
+                    sources.indices.any { sourceValues[it] != values[it] }
+                ) {
+                    if (collecting) {
+                        transform(clone(values))
+                    } else {
+                        sources.indices.forEach { sourceValues[it] = values[it] }
+                        transform(clone(values)).also {
+                            transformedValue = it
+                        }
+                    }
+                } else {
+                    transformedValue as R
+                }
+            }
         }
 
     private class SourceEmission(

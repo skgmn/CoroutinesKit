@@ -16,17 +16,17 @@ private class StateMap<T, R>(
     private var collecting = false
 
     @Volatile
-    private var sourceValue: Any? = Uninitialized
+    private var sourceValue: Any? = InvalidValue
 
     @Volatile
-    private var transformedValue: Any? = Uninitialized
+    private var transformedValue: Any? = InvalidValue
 
     @OptIn(InternalCoroutinesApi::class)
     override suspend fun collect(collector: FlowCollector<R>) {
         synchronized(lock) {
             collecting = true
-            sourceValue = source.value
-            transformedValue = Uninitialized
+            sourceValue = InvalidValue
+            transformedValue = InvalidValue
         }
         try {
             source.collect { sourceValue ->
@@ -36,17 +36,17 @@ private class StateMap<T, R>(
                     if (this.transformedValue != transformedValue) {
                         transformedValue.also { this.transformedValue = it }
                     } else {
-                        Uninitialized
+                        InvalidValue
                     }
                 }
-                if (value !== Uninitialized) {
+                if (value !== InvalidValue) {
                     collector.emit(value as R)
                 }
             }
         } finally {
             synchronized(lock) {
-                sourceValue = Uninitialized
-                transformedValue = Uninitialized
+                sourceValue = InvalidValue
+                transformedValue = InvalidValue
                 collecting = false
             }
         }
@@ -58,20 +58,16 @@ private class StateMap<T, R>(
     override val value: R
         get() {
             return synchronized(lock) {
-                if (collecting) {
-                    if (transformedValue === Uninitialized) {
-                        transform(sourceValue as T).also { transformedValue = it }
+                val value = source.value
+                if (transformedValue === InvalidValue || sourceValue != value) {
+                    if (collecting) {
+                        transform(value)
                     } else {
-                        transformedValue as R
-                    }
-                } else {
-                    val value = source.value
-                    if (transformedValue === Uninitialized || sourceValue != value) {
                         sourceValue = value
                         transform(value).also { transformedValue = it }
-                    } else {
-                        transformedValue as R
                     }
+                } else {
+                    transformedValue as R
                 }
             }
         }

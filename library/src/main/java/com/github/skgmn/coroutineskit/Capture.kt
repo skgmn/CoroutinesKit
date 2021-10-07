@@ -192,7 +192,7 @@ private fun <R> Flow<*>.captureImpl(
 ): Flow<R> {
     return flow {
         coroutineScope {
-            val latestValues = Array<Any?>(others.size) { Uninitialized }
+            val latestValues = Array<Any?>(others.size) { InvalidValue }
             val outerScope = this
 
             others.forEachIndexed { i, other ->
@@ -219,7 +219,7 @@ private fun <R> Flow<*>.captureImpl(
                         }
                     }
                 }
-                if (values.all { it !== Uninitialized }) {
+                if (values.all { it !== InvalidValue }) {
                     emit(transform(values))
                 }
             }
