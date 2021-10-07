@@ -1,7 +1,7 @@
 # coroutineskit
 
 ```gradle
-implementation "com.github.skgmn:coroutineskit:0.3.1"
+implementation "com.github.skgmn:coroutineskit:0.4.0"
 ```
 
 ## shareRefCount, stateRefCount
@@ -77,10 +77,22 @@ fun <T> Flow<T>.chunked(timeMillis: Long): Flow<List<T>>
 fun <T> Flow<T>.chunked(count: Int, timeMillis: Long): Flow<List<T>>
 ```
 
+## defer
+
+Same as RxJava's `defer()`.
+
+```kotlin
+val flow = defer {
+    // Code here runs when the flow is being collected.
+    val parameter = getParameter()
+    createFlow(parameter)
+}
+```
+
 # coroutineskit-lifecycle
 
 ```gradle
-implementation "com.github.skgmn:coroutineskit-lifecycle:0.3.1"
+implementation "com.github.skgmn:coroutineskit-lifecycle:0.4.0"
 ```
 
 ## isAtLeast
