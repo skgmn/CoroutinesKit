@@ -20,6 +20,9 @@ class StateCombine<T, R>(
     private val lock = Any()
 
     private val sourceValues: Array<Any?> = Array(sources.size) { InvalidValue }
+    private val tempValues: Array<Any?> by lazy {
+        Array(sources.size) { InvalidValue }
+    }
 
     @Volatile
     private var collecting = false
@@ -39,23 +42,22 @@ class StateCombine<T, R>(
                 var ready = false
                 val actor = actor<SourceEmission> {
                     for (emission in channel) {
-                        val value = synchronized(lock) {
+                        var emitValue: Any? = InvalidValue
+                        synchronized(lock) {
                             if (sourceValues[emission.index] != emission.value) {
                                 sourceValues[emission.index] = emission.value
                                 if (ready || sourceValues.all { it !== InvalidValue }) {
                                     ready = true
-                                    transform(clone(sourceValues)).also {
-                                        transformedValue = it
+                                    val value = transform(clone(sourceValues))
+                                    if (transformedValue != value) {
+                                        transformedValue = value
+                                        emitValue = value
                                     }
-                                } else {
-                                    InvalidValue
                                 }
-                            } else {
-                                InvalidValue
                             }
                         }
-                        if (value !== InvalidValue) {
-                            collector.emit(value as R)
+                        if (emitValue !== InvalidValue) {
+                            collector.emit(emitValue as R)
                         }
                     }
                 }
@@ -87,14 +89,13 @@ class StateCombine<T, R>(
     override val value: R
         get() {
             return synchronized(lock) {
-                val values = Array(sources.size) { sources[it].value }
-                if (transformedValue === InvalidValue ||
-                    sources.indices.any { sourceValues[it] != values[it] }
-                ) {
+                val values = tempValues
+                sources.indices.forEach { values[it] = sources[it].value }
+                if (transformedValue === InvalidValue || !sourceValues.contentEquals(values)) {
                     if (collecting) {
                         transform(clone(values))
                     } else {
-                        sources.indices.forEach { sourceValues[it] = values[it] }
+                        values.copyInto(sourceValues)
                         transform(clone(values)).also {
                             transformedValue = it
                         }
