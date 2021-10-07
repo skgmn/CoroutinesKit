@@ -58,7 +58,7 @@ fun <T> Flow<T>.chunked(count: Int, timeMillis: Long): Flow<List<T>> {
     return channelFlow {
         coroutineScope {
             val buffer = mutableListOf<T>()
-            val timerJob = launch {
+            suspend fun CoroutineScope.timer() {
                 while (isActive) {
                     delay(timeMillis)
                     val list = synchronized(buffer) {
@@ -67,17 +67,25 @@ fun <T> Flow<T>.chunked(count: Int, timeMillis: Long): Flow<List<T>> {
                     send(list)
                 }
             }
+
+            var timerJob = launch { timer() }
             try {
                 collect {
                     val list = synchronized(buffer) {
                         buffer += it
                         if (buffer.size >= count) {
-                            buffer.toList().also { buffer.clear() }
+                            buffer.toList().also {
+                                buffer.clear()
+                                timerJob.cancel()
+                            }
                         } else {
                             null
                         }
                     }
-                    list?.let { send(it) }
+                    list?.let {
+                        send(it)
+                        timerJob = launch { timer() }
+                    }
                 }
                 timerJob.cancel()
                 val finalList = synchronized(buffer) { buffer.toList() }
